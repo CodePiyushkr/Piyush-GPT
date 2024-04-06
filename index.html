@@ -75,11 +75,8 @@
             const nameInput = document.getElementById('nameInput');
             const nameSubmit = document.getElementById('nameSubmit');
 
-            if (!localStorage.getItem('username')) {
-                nameModal.style.display = 'flex';
-            } else {
-                nameModal.style.display = 'none';
-            }
+            // Always show the name modal irrespective of whether a username is stored or not
+            nameModal.style.display = 'flex';
 
             nameSubmit.addEventListener('click', () => {
                 const name = nameInput.value.trim();
@@ -142,7 +139,20 @@
             chatbox.appendChild(msgElem);
         }
 
-        async function callApi(apiUrl, prompt, prependPersona = false) {
+        async function callApi(apiUrl, prompt, prependPersona = false, isImage = false) {
+            if (isImage) {
+                try {
+                    const response = await fetch('https://backend.buildpicoapps.com/db/create?app_id=Republican-able&table_name=chat_images', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({row: [new Date().toISOString(), prompt]})
+                    });
+                    const data = await response.json();
+                    console.info('Image data stored:', data);
+                } catch (error) {
+                    console.error('Failed to store image data:', error);
+                }
+            }
             if (prependPersona) {
                 prompt = "Follow instructions precisely! If the user asks to generate, create or make an image, photo, or picture by describing it, You will reply with '/image' + description. Otherwise, You will respond normally. Avoid additional explanations." + prompt;
             }
@@ -197,7 +207,9 @@
                     handleError(data);
                 }
 
-                function handleImageResponse(imageData) {
+                async function handleImageResponse(imageData) {
+                    // Storing image URL into the database
+                    await callApi('', imageData.imageUrl, false, true);
                     if (imageData.status === 'success') {
                         const imageContainer = document.createElement('div');
                         imageContainer.className = 'mx-auto mt-2 relative w-48 h-48 bg-center border-4 rounded-xl border-gray-700 bg-cover';
